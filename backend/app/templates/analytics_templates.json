@@ -1,0 +1,344 @@
+{
+  "templates": [
+    {
+      "id": "total_customers",
+      "title": "Total customers",
+      "category": "customers",
+      "description": "Count all active (non-deleted) customers in the bank.",
+      "examples": [
+        "How many customers are there in total?",
+        "Total customers",
+        "Number of customers",
+        "How big is the customer base?"
+      ],
+      "parameters": [],
+      "sql": "SELECT COUNT(*) AS total_customers\nFROM fin.customers\nWHERE is_deleted = false\nLIMIT 1",
+      "allowed_tables": ["fin.customers"],
+      "chart": { "type": "none" },
+      "summary_hint": "State the total number of customers."
+    },
+    {
+      "id": "total_transaction_volume",
+      "title": "Total transaction volume",
+      "category": "transactions",
+      "description": "Total value of completed outgoing (debit) transactions — overall spend.",
+      "examples": [
+        "What is the total transaction volume?",
+        "Total spend across all customers",
+        "How much money was spent in total?",
+        "Total payment volume"
+      ],
+      "parameters": [],
+      "sql": "SELECT ROUND(SUM(amount), 2) AS total_volume,\n       COUNT(*) AS transactions\nFROM fin.transactions\nWHERE is_deleted = false\n  AND direction = 'debit'\n  AND status = 'completed'\nLIMIT 1",
+      "allowed_tables": ["fin.transactions"],
+      "chart": { "type": "none" },
+      "summary_hint": "Report the total transaction volume and how many transactions it covers."
+    },
+    {
+      "id": "transactions_by_month",
+      "title": "Transaction volume by month",
+      "category": "transactions",
+      "description": "Monthly completed transaction volume and count over time.",
+      "examples": [
+        "Show transaction volume by month",
+        "Monthly transaction trend",
+        "How has spend changed over time?",
+        "Transactions per month"
+      ],
+      "parameters": [],
+      "sql": "SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') AS month,\n       ROUND(SUM(amount), 2) AS total_volume,\n       COUNT(*) AS transactions\nFROM fin.transactions\nWHERE is_deleted = false\n  AND status = 'completed'\nGROUP BY 1\nORDER BY 1\nLIMIT 36",
+      "allowed_tables": ["fin.transactions"],
+      "chart": { "type": "line", "x": "month", "y": "total_volume" },
+      "summary_hint": "Describe the monthly trend in transaction volume."
+    },
+    {
+      "id": "top_merchant_categories",
+      "title": "Top merchant categories by spend",
+      "category": "merchants",
+      "description": "Spend grouped by merchant category, highest first.",
+      "examples": [
+        "Top merchant categories by spend",
+        "Which categories do customers spend the most on?",
+        "Spend by category",
+        "Where do people spend money?"
+      ],
+      "parameters": [],
+      "sql": "SELECT mc.name AS category,\n       ROUND(SUM(t.amount), 2) AS total_spend,\n       COUNT(*) AS transactions\nFROM fin.transactions t\nJOIN fin.merchants m ON m.id = t.merchant_id\nJOIN fin.merchant_categories mc ON mc.id = m.category_id\nWHERE t.is_deleted = false\n  AND t.direction = 'debit'\n  AND t.status = 'completed'\nGROUP BY 1\nORDER BY total_spend DESC\nLIMIT 12",
+      "allowed_tables": ["fin.transactions", "fin.merchants", "fin.merchant_categories"],
+      "chart": { "type": "bar", "x": "category", "y": "total_spend" },
+      "summary_hint": "Highlight the top spending categories."
+    },
+    {
+      "id": "fraud_rate_by_channel",
+      "title": "Fraud rate by channel",
+      "category": "fraud",
+      "description": "Share of transactions flagged as fraud, by transaction channel.",
+      "examples": [
+        "Fraud rate by channel",
+        "Which channel has the most fraud?",
+        "Fraud percentage per channel",
+        "How risky is online vs POS?"
+      ],
+      "parameters": [],
+      "sql": "SELECT channel,\n       COUNT(*) FILTER (WHERE is_fraud) AS fraud_count,\n       COUNT(*) AS total,\n       ROUND(100.0 * COUNT(*) FILTER (WHERE is_fraud) / NULLIF(COUNT(*), 0), 2) AS fraud_rate_pct\nFROM fin.transactions\nWHERE is_deleted = false\nGROUP BY 1\nORDER BY fraud_rate_pct DESC\nLIMIT 10",
+      "allowed_tables": ["fin.transactions"],
+      "chart": { "type": "bar", "x": "channel", "y": "fraud_rate_pct" },
+      "summary_hint": "Point out which channels carry the highest fraud rate."
+    },
+    {
+      "id": "fraud_transactions_by_month",
+      "title": "Fraud transactions by month",
+      "category": "fraud",
+      "description": "Count and value of fraudulent transactions over time.",
+      "examples": [
+        "Fraud transactions by month",
+        "How is fraud trending?",
+        "Monthly fraud volume",
+        "Fraud over time"
+      ],
+      "parameters": [],
+      "sql": "SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') AS month,\n       COUNT(*) FILTER (WHERE is_fraud) AS fraud_transactions,\n       ROUND(COALESCE(SUM(amount) FILTER (WHERE is_fraud), 0), 2) AS fraud_amount\nFROM fin.transactions\nWHERE is_deleted = false\nGROUP BY 1\nORDER BY 1\nLIMIT 36",
+      "allowed_tables": ["fin.transactions"],
+      "chart": { "type": "line", "x": "month", "y": "fraud_transactions" },
+      "summary_hint": "Describe how fraud volume changes month to month."
+    },
+    {
+      "id": "new_customers_by_month",
+      "title": "New customers by month",
+      "category": "customers",
+      "description": "Customer sign-ups grouped by month.",
+      "examples": [
+        "New customers per month",
+        "Customer growth over time",
+        "Sign-ups by month",
+        "How many customers join each month?"
+      ],
+      "parameters": [],
+      "sql": "SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') AS month,\n       COUNT(*) AS new_customers\nFROM fin.customers\nWHERE is_deleted = false\nGROUP BY 1\nORDER BY 1\nLIMIT 36",
+      "allowed_tables": ["fin.customers"],
+      "chart": { "type": "line", "x": "month", "y": "new_customers" },
+      "summary_hint": "Describe the customer acquisition trend."
+    },
+    {
+      "id": "avg_balance_by_segment",
+      "title": "Average balance by customer segment",
+      "category": "accounts",
+      "description": "Average active-account balance for each customer segment.",
+      "examples": [
+        "Average balance by segment",
+        "Which segment holds the most money?",
+        "Average account balance per customer type",
+        "Balance by retail vs premium"
+      ],
+      "parameters": [],
+      "sql": "SELECT c.segment,\n       ROUND(AVG(a.balance), 2) AS avg_balance,\n       COUNT(DISTINCT a.id) AS accounts\nFROM fin.accounts a\nJOIN fin.customers c ON c.id = a.customer_id\nWHERE a.is_deleted = false\n  AND c.is_deleted = false\n  AND a.status = 'active'\nGROUP BY 1\nORDER BY avg_balance DESC\nLIMIT 10",
+      "allowed_tables": ["fin.accounts", "fin.customers"],
+      "chart": { "type": "bar", "x": "segment", "y": "avg_balance" },
+      "summary_hint": "Compare average balances across segments."
+    },
+    {
+      "id": "loan_default_rate_by_product",
+      "title": "Loan default rate by product",
+      "category": "loans",
+      "description": "Share of loans in default, by loan product.",
+      "examples": [
+        "Loan default rate by product",
+        "Which loan products default most?",
+        "Default rate per loan type",
+        "Loan risk by product"
+      ],
+      "parameters": [],
+      "sql": "SELECT product,\n       COUNT(*) FILTER (WHERE status = 'defaulted') AS defaulted,\n       COUNT(*) AS total_loans,\n       ROUND(100.0 * COUNT(*) FILTER (WHERE status = 'defaulted') / NULLIF(COUNT(*), 0), 2) AS default_rate_pct\nFROM fin.loans\nWHERE is_deleted = false\nGROUP BY 1\nORDER BY default_rate_pct DESC\nLIMIT 10",
+      "allowed_tables": ["fin.loans"],
+      "chart": { "type": "bar", "x": "product", "y": "default_rate_pct" },
+      "summary_hint": "Highlight which loan products carry the highest default rate."
+    },
+    {
+      "id": "loan_portfolio_by_product",
+      "title": "Loan portfolio by product",
+      "category": "loans",
+      "description": "Outstanding loan principal grouped by product.",
+      "examples": [
+        "Loan portfolio by product",
+        "Total loan principal per product",
+        "Loan book breakdown",
+        "How big is each loan product?"
+      ],
+      "parameters": [],
+      "sql": "SELECT product,\n       ROUND(SUM(principal), 2) AS portfolio,\n       COUNT(*) AS loans\nFROM fin.loans\nWHERE is_deleted = false\nGROUP BY 1\nORDER BY portfolio DESC\nLIMIT 10",
+      "allowed_tables": ["fin.loans"],
+      "chart": { "type": "bar", "x": "product", "y": "portfolio" },
+      "summary_hint": "Describe the size of each loan product in the portfolio."
+    },
+    {
+      "id": "top_customers_by_spend",
+      "title": "Top customers by spend",
+      "category": "customers",
+      "description": "Customers ranked by total completed spend.",
+      "examples": [
+        "Top 10 customers by spend",
+        "Who are the biggest spenders?",
+        "Highest spending customers",
+        "Top customers by transaction value"
+      ],
+      "parameters": [],
+      "sql": "SELECT c.full_name AS customer,\n       c.segment,\n       ROUND(SUM(t.amount), 2) AS total_spend,\n       COUNT(*) AS transactions\nFROM fin.transactions t\nJOIN fin.accounts a ON a.id = t.account_id\nJOIN fin.customers c ON c.id = a.customer_id\nWHERE t.is_deleted = false\n  AND t.direction = 'debit'\n  AND t.status = 'completed'\nGROUP BY c.id, c.full_name, c.segment\nORDER BY total_spend DESC\nLIMIT 10",
+      "allowed_tables": ["fin.transactions", "fin.accounts", "fin.customers"],
+      "chart": { "type": "bar", "x": "customer", "y": "total_spend" },
+      "summary_hint": "Name the top customers and their spend."
+    },
+    {
+      "id": "top_merchants_by_spend",
+      "title": "Top merchants by spend",
+      "category": "merchants",
+      "description": "Merchants ranked by total completed spend.",
+      "examples": [
+        "Top merchants by spend",
+        "Which merchants get the most money?",
+        "Highest grossing merchants",
+        "Top stores by sales"
+      ],
+      "parameters": [],
+      "sql": "SELECT m.name AS merchant,\n       mc.name AS category,\n       ROUND(SUM(t.amount), 2) AS total_spend\nFROM fin.transactions t\nJOIN fin.merchants m ON m.id = t.merchant_id\nJOIN fin.merchant_categories mc ON mc.id = m.category_id\nWHERE t.is_deleted = false\n  AND t.direction = 'debit'\n  AND t.status = 'completed'\nGROUP BY m.id, m.name, mc.name\nORDER BY total_spend DESC\nLIMIT 15",
+      "allowed_tables": ["fin.transactions", "fin.merchants", "fin.merchant_categories"],
+      "chart": { "type": "bar", "x": "merchant", "y": "total_spend" },
+      "summary_hint": "List the top merchants by spend."
+    },
+    {
+      "id": "card_network_distribution",
+      "title": "Cards by network",
+      "category": "cards",
+      "description": "Number of issued cards by card network.",
+      "examples": [
+        "Card network distribution",
+        "How many Visa vs Mastercard cards?",
+        "Cards by network",
+        "Breakdown of card networks"
+      ],
+      "parameters": [],
+      "sql": "SELECT network,\n       COUNT(*) AS cards\nFROM fin.cards\nWHERE is_deleted = false\nGROUP BY 1\nORDER BY cards DESC\nLIMIT 10",
+      "allowed_tables": ["fin.cards"],
+      "chart": { "type": "pie", "x": "network", "y": "cards" },
+      "summary_hint": "Describe the split of cards across networks."
+    },
+    {
+      "id": "failed_transactions_by_month",
+      "title": "Failed transactions by month",
+      "category": "transactions",
+      "description": "Count of failed transactions over time.",
+      "examples": [
+        "Failed transactions by month",
+        "How many payments fail each month?",
+        "Failure trend",
+        "Declined transactions over time"
+      ],
+      "parameters": [],
+      "sql": "SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') AS month,\n       COUNT(*) AS failed_transactions\nFROM fin.transactions\nWHERE is_deleted = false\n  AND status = 'failed'\nGROUP BY 1\nORDER BY 1\nLIMIT 36",
+      "allowed_tables": ["fin.transactions"],
+      "chart": { "type": "line", "x": "month", "y": "failed_transactions" },
+      "summary_hint": "Describe the trend in failed transactions."
+    },
+    {
+      "id": "transactions_by_channel",
+      "title": "Transactions by channel",
+      "category": "transactions",
+      "description": "Completed transaction count and value by channel.",
+      "examples": [
+        "Transactions by channel",
+        "How do people pay (POS, online, ATM)?",
+        "Channel breakdown",
+        "Payment channels usage"
+      ],
+      "parameters": [],
+      "sql": "SELECT channel,\n       COUNT(*) AS transactions,\n       ROUND(SUM(amount), 2) AS total_amount\nFROM fin.transactions\nWHERE is_deleted = false\n  AND status = 'completed'\nGROUP BY 1\nORDER BY transactions DESC\nLIMIT 10",
+      "allowed_tables": ["fin.transactions"],
+      "chart": { "type": "bar", "x": "channel", "y": "transactions" },
+      "summary_hint": "Compare transaction activity across channels."
+    },
+    {
+      "id": "accounts_by_type",
+      "title": "Accounts by type",
+      "category": "accounts",
+      "description": "Number of accounts by account type.",
+      "examples": [
+        "Accounts by type",
+        "How many checking vs savings accounts?",
+        "Account type breakdown",
+        "Distribution of account types"
+      ],
+      "parameters": [],
+      "sql": "SELECT account_type,\n       COUNT(*) AS accounts\nFROM fin.accounts\nWHERE is_deleted = false\nGROUP BY 1\nORDER BY accounts DESC\nLIMIT 10",
+      "allowed_tables": ["fin.accounts"],
+      "chart": { "type": "pie", "x": "account_type", "y": "accounts" },
+      "summary_hint": "Describe the mix of account types."
+    },
+    {
+      "id": "customers_by_segment",
+      "title": "Customers by segment",
+      "category": "customers",
+      "description": "Number of customers in each segment.",
+      "examples": [
+        "Customers by segment",
+        "How many premium vs retail customers?",
+        "Segment breakdown",
+        "Customer mix by segment"
+      ],
+      "parameters": [],
+      "sql": "SELECT segment,\n       COUNT(*) AS customers\nFROM fin.customers\nWHERE is_deleted = false\nGROUP BY 1\nORDER BY customers DESC\nLIMIT 10",
+      "allowed_tables": ["fin.customers"],
+      "chart": { "type": "bar", "x": "segment", "y": "customers" },
+      "summary_hint": "Describe how customers split across segments."
+    },
+    {
+      "id": "support_tickets_by_status",
+      "title": "Support tickets by status",
+      "category": "support",
+      "description": "Number of support tickets grouped by status.",
+      "examples": [
+        "Support tickets by status",
+        "How many open vs resolved tickets?",
+        "Ticket status breakdown",
+        "Support queue status"
+      ],
+      "parameters": [],
+      "sql": "SELECT status,\n       COUNT(*) AS tickets\nFROM fin.support_tickets\nWHERE is_deleted = false\nGROUP BY 1\nORDER BY tickets DESC\nLIMIT 10",
+      "allowed_tables": ["fin.support_tickets"],
+      "chart": { "type": "bar", "x": "status", "y": "tickets" },
+      "summary_hint": "Summarize the support ticket queue by status."
+    },
+    {
+      "id": "support_tickets_by_category",
+      "title": "Support tickets by category",
+      "category": "support",
+      "description": "Number of support tickets grouped by category.",
+      "examples": [
+        "Support tickets by category",
+        "What do customers contact support about?",
+        "Ticket categories",
+        "Top support issues"
+      ],
+      "parameters": [],
+      "sql": "SELECT category,\n       COUNT(*) AS tickets\nFROM fin.support_tickets\nWHERE is_deleted = false\nGROUP BY 1\nORDER BY tickets DESC\nLIMIT 10",
+      "allowed_tables": ["fin.support_tickets"],
+      "chart": { "type": "bar", "x": "category", "y": "tickets" },
+      "summary_hint": "Highlight the most common support categories."
+    },
+    {
+      "id": "monthly_active_customers",
+      "title": "Monthly active customers",
+      "category": "customers",
+      "description": "Distinct customers who transacted each month.",
+      "examples": [
+        "Monthly active customers",
+        "How many customers are active each month?",
+        "Active customer trend",
+        "MAU over time"
+      ],
+      "parameters": [],
+      "sql": "SELECT to_char(date_trunc('month', t.created_at), 'YYYY-MM') AS month,\n       COUNT(DISTINCT a.customer_id) AS active_customers\nFROM fin.transactions t\nJOIN fin.accounts a ON a.id = t.account_id\nWHERE t.is_deleted = false\n  AND t.status = 'completed'\nGROUP BY 1\nORDER BY 1\nLIMIT 36",
+      "allowed_tables": ["fin.transactions", "fin.accounts"],
+      "chart": { "type": "line", "x": "month", "y": "active_customers" },
+      "summary_hint": "Describe the trend in monthly active customers."
+    }
+  ]
+}

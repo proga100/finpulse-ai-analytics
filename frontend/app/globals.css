@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* FinPulse — dark-first fintech theme. Indigo→violet accent on a deep navy canvas. */
+:root {
+  --background: 215 35% 98%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --muted: 215 25% 94%;
+  --muted-foreground: 215 16% 42%;
+  --primary: 255 80% 60%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 168 70% 42%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 215 22% 88%;
+  --ring: 255 80% 60%;
+  --chart-1: 255 80% 62%;
+  --chart-2: 168 70% 45%;
+  --chart-3: 32 95% 58%;
+  --chart-4: 322 75% 60%;
+  --chart-5: 199 89% 52%;
+}
+
+.dark {
+  --background: 222 47% 5%;
+  --foreground: 210 40% 96%;
+  --card: 222 40% 9%;
+  --card-foreground: 210 40% 96%;
+  --muted: 220 30% 15%;
+  --muted-foreground: 215 20% 62%;
+  --primary: 255 91% 68%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 168 76% 48%;
+  --accent-foreground: 222 47% 6%;
+  --destructive: 0 72% 56%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 222 28% 18%;
+  --ring: 255 91% 68%;
+  --chart-1: 255 91% 70%;
+  --chart-2: 168 76% 52%;
+  --chart-3: 36 96% 60%;
+  --chart-4: 322 80% 66%;
+  --chart-5: 199 90% 58%;
+  color-scheme: dark;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ambient brand glow behind the app — subtle radial gradients. */
+.finpulse-aura {
+  background:
+    radial-gradient(60rem 40rem at 15% -10%, hsl(var(--primary) / 0.16), transparent 60%),
+    radial-gradient(50rem 40rem at 100% 0%, hsl(var(--accent) / 0.12), transparent 55%);
+}
+
+.brand-gradient-text {
+  background-image: linear-gradient(100deg, hsl(var(--primary)), hsl(var(--accent)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glass {
+  background: hsl(var(--card) / 0.72);
+  backdrop-filter: blur(10px);
+}
+
+/* Premium custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}

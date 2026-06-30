@@ -1,0 +1,70 @@
+services:
+  db:
+    image: postgres:18
+    container_name: finpulse-db
+    # Internal-only: never published to the host. Only the backend reaches it.
+    environment:
+      POSTGRES_DB: finpulse
+      POSTGRES_USER: finpulse_db
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-finpulse_db_password}
+    volumes:
+      - finpulse_pgdata:/var/lib/postgresql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/10_schema.sql:ro
+      - ./database/finpulse_seed.sql:/docker-entrypoint-initdb.d/20_seed.sql:ro
+      - ./database/read_only_user.sql:/docker-entrypoint-initdb.d/30_read_only_user.sql:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finpulse_db -d finpulse"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    container_name: finpulse-backend
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://finpulse_ai_app:change_this_app_password@db:5432/finpulse}
+      ANALYTICS_API_TOKEN: ${ANALYTICS_API_TOKEN:-change_this_analytics_api_token}
+      SQL_AGENT_PROVIDER: ${SQL_AGENT_PROVIDER:-template}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-gemini}
+      TEMPLATE_MATCH_THRESHOLD: ${TEMPLATE_MATCH_THRESHOLD:-0.75}
+      CORS_ORIGINS: ${CORS_ORIGINS:-'["https://finpulse.flance.info"]'}
+      DEMO_LIMIT_ENABLED: ${DEMO_LIMIT_ENABLED:-true}
+      DEMO_CALL_LIMIT: ${DEMO_CALL_LIMIT:-5}
+      DEMO_WINDOW_SECONDS: ${DEMO_WINDOW_SECONDS:-86400}
+    volumes:
+      - finpulse_chromadb:/app/chromadb
+    # Bound to localhost only — health/debug. The browser never hits it directly.
+    ports:
+      - "127.0.0.1:8012:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: finpulse-frontend
+    environment:
+      BACKEND_API_BASE_URL: ${BACKEND_API_BASE_URL:-http://backend:8000}
+      ANALYTICS_API_TOKEN: ${ANALYTICS_API_TOKEN:-change_this_analytics_api_token}
+    # nginx proxies https://finpulse.flance.info -> 127.0.0.1:3012.
+    ports:
+      - "127.0.0.1:3012:3000"
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+volumes:
+  finpulse_pgdata:
+  finpulse_chromadb:
