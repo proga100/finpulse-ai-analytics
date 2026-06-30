@@ -25,6 +25,7 @@ export async function askAnalyticsQuestion(
     clarificationHistory?: ClarificationAnswer[];
     skipClarification?: boolean;
     includeSummary?: boolean;
+    replaySql?: string;
     conversationHistory?: { question: string; sql: string | null }[];
     signal?: AbortSignal;
   } = {}
@@ -45,6 +46,7 @@ export async function askAnalyticsQuestion(
       clarification_history: options.clarificationHistory ?? [],
       skip_clarification: options.skipClarification ?? false,
       include_summary: options.includeSummary ?? null,
+      replay_sql: options.replaySql ?? null,
       conversation_history: options.conversationHistory ?? []
     })
   });

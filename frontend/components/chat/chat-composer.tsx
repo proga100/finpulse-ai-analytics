@@ -34,7 +34,7 @@ export function ChatComposer({
         className="min-h-10 flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground disabled:opacity-60"
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        placeholder={disabled ? "Demo limit reached — see options above ↑" : placeholder ?? "Ask about transactions, fraud, customers, loans…"}
+        placeholder={placeholder ?? "Ask about transactions, fraud, customers, loans…"}
         disabled={isLoading || disabled}
       />
       {isLoading ? (
