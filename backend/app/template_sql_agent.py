@@ -252,14 +252,30 @@ User Question: {question}
 Data Columns: {columns}
 Data Rows: {rows}
 """
-                response = client.models.generate_content(
-                    model="gemini-2.5-flash-lite",
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        temperature=0.2,
-                    ),
-                )
-                return response.text.strip()
+                # Try a light model first, then fall back to a stronger one if it
+                # is overloaded (Gemini 503 UNAVAILABLE) or errors — so a transient
+                # capacity spike doesn't drop the summary to a generic line.
+                seen: set[str] = set()
+                models = [
+                    m
+                    for m in (self.settings.query_normalizer_model, self.settings.sql_generation_model_fast)
+                    if m and not (m in seen or seen.add(m))
+                ]
+                for model in models:
+                    try:
+                        response = await asyncio.to_thread(
+                            lambda m=model: client.models.generate_content(
+                                model=m,
+                                contents=prompt,
+                                config=types.GenerateContentConfig(temperature=0.2),
+                            )
+                        )
+                        text = (response.text or "").strip()
+                        if text:
+                            return text
+                    except Exception as e:
+                        logger.warning(f"Summary model {model} failed: {e}")
+                        continue
             except Exception as e:
                 logger.warning(f"Failed to use LLM to summarize results: {e}")
 
