@@ -572,6 +572,7 @@ export default function FinPulsePage() {
         open={limitOpen}
         used={DEMO_LIMIT}
         limit={DEMO_LIMIT}
+        language={language}
         contactEmail={CONTACT_EMAIL}
         siteUrl={SITE_URL}
         githubUrl={GITHUB_URL}
